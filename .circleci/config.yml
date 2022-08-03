@@ -314,7 +314,7 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            apk add --update --no-cache tar gzip nodejs npm tree aws-cli ansible 
+            apk add --update --no-cache tar gzip nodejs npm aws-cli ansible 
       - attach_workspace:
           at: ~/
       - restore_cache:
@@ -329,10 +329,8 @@ jobs:
             tar -C backend -czvf artifact.tar.gz . 
             mkdir -p ~/project/.circleci/ansible/roles/deploy/files/
             mv artifact.tar.gz .circleci/ansible/roles/deploy/files/artifact.tar.gz
-            cp ~/project/backend/.env .circleci/ansible/roles/deploy/files/backend.env
             cd .circleci/ansible
-            echo "Verifying contents of the inventory.txt file...$(cat -1 inventory.txt)"
-            cat inventory.txt 
+            echo "Verifying contents of the inventory.txt file is...$(cat inventory.txt)"
             ansible-playbook -i inventory.txt deploy-backend.yml
       - destroy-environment: 
           workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
