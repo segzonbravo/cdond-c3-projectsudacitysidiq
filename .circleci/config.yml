@@ -255,7 +255,7 @@ jobs:
             echo $TYPEORM_HOST
             echo TYPEORM_HOST=$TYPEORM_HOST >> ~/project/backend/.env
             cd backend
-            # npm install > /dev/null
+            npm install
             # npm run build > /dev/null
             npm run migrations >> migrations.txt
             cat migrations.txt
