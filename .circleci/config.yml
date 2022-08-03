@@ -3,10 +3,10 @@ version: 2.1
 orbs: 
   slack: circleci/slack@4.10.1
 
-# parameters:
-#   workflow_id:
-#     type: string
-#     default: '${CIRCLE_WORKFLOW_ID}'
+parameters:
+  workflow_id:
+    type: string
+    default: '${CIRCLE_WORKFLOW_ID}'
 
 
 commands:
@@ -442,38 +442,28 @@ jobs:
       - image: amazon/aws-cli
     steps:
       - checkout
-      - run:
-          name: Install dependencies
-          command: yum install tar gzip -y
-      - attach_workspace:
-          at: ~/
+      # - run:
+      #     name: Install dependencies
+      #     command: yum install tar gzip -y
+      # - attach_workspace:
+      #     at: ~/
       - run:
           name: Get old stack workflow id
           command: |
-            export OldWorkflowID=$(cat ~/oldWorkflowId.txt)
-            echo OldWorkflowID: "${OldWorkflowID}"
+            export OldWorkflowID=<<pipeline.parameters.workflow_id>>
+            export STACKS=$(aws cloudformation list-stacks \
+            --query "StackSummaries[*].StackName" \
+            --stack-status-filter CREATE_COMPLETE --no-paginate --output text)
 
       - run:
           name: Remove old stacks and files
           command: |
-            export STACKS=($(aws cloudformation list-stacks --query "StackSummaries[*].StackName" \
-              --stack-status-filter CREATE_COMPLETE --no-paginate --output text))
-
-            export OldWorkflowID=$(cat ~/oldWorkflowId.txt)
-
-            echo OldWorkflowID: "${OldWorkflowID}"
-            echo Stack names: "${STACKS[@]}" 
-
-            if [[ "${CIRCLE_WORKFLOW_ID:0:7}" != "${OldWorkflowID}" ]]
+            if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]
             then
+              echo "------------ Cannot cleanup stacks --------------"
               aws s3 rm "s3://udapeople-${OldWorkflowID}" --recursive
-              aws s3api delete-bucket --bucket "udapeople-${OldWorkflowID}"
               aws cloudformation delete-stack --stack-name "udapeople-backend-${OldWorkflowID}"
               aws cloudformation delete-stack --stack-name "udapeople-frontend-${OldWorkflowID}"
-
-              echo "Old Stacks removed completely"
-            else
-              echo "No old stacks to be deleted"
             fi
             
 
@@ -482,20 +472,20 @@ workflows:
     jobs:
       - build-frontend
       - build-backend
-      # - test-frontend:
-      #     requires: [build-frontend]
-      # - test-backend:
-      #     requires: [build-backend]
-      # - scan-backend:
-      #     requires: [build-backend]
-      # - scan-frontend:
-      #     requires: [build-frontend]
+      - test-frontend:
+          requires: [build-frontend]
+      - test-backend:
+          requires: [build-backend]
+      - scan-backend:
+          requires: [build-backend]
+      - scan-frontend:
+          requires: [build-frontend]
       - deploy-infrastructure:
-          requires: [build-frontend, build-backend]
-          # requires: [test-frontend, test-backend, scan-frontend, scan-backend]
-      #     filters:
-      #       branches:
-      #         only: [test-feature-branch]
+          # requires: [build-frontend, build-backend]
+          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+          filters:
+            branches:
+              only: [dev-branch]
       - configure-infrastructure:
           requires: [deploy-infrastructure]
       - run-migrations:
