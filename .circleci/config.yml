@@ -234,42 +234,32 @@ jobs:
       - image: circleci/node:13.8.0
     steps:
       - checkout
-      # - attach_workspace:
-      #     at: ~/.circleci/ansible/inventory.txt
+      - restore_cache:
+          keys: [BE-build]
       - run:
-          name: Install dependencies
+          name: Install AWS CLI
           command: |
-            sudo apt install -y tar gzip curl
             curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
             unzip awscliv2.zip
             sudo ./aws/install
-      # - restore_cache:
-      #     keys: ['backend-build']
-      - attach_workspace:
-          at: ~/
+            aws --version
       - run:
           name: Run migrations
           command: |
-            # Get DB host from AWS and add to env
-            export TYPEORM_HOST=$(aws cloudformation list-exports --query "Exports[?Name==\`EndpointAddress-${CIRCLE_WORKFLOW_ID:0:7}\`].Value" --output text)
-            echo $TYPEORM_HOST
-            echo TYPEORM_HOST=$TYPEORM_HOST >> ~/project/backend/.env
             cd backend
             npm install
-            # npm run build > /dev/null
-            npm run migrations >> migrations.txt
-            cat migrations.txt
+            npm run migrations > migrations.txt
       - run:
-          name: Send migration results to kvdb.io
+          name: Send migration results to KVDB
           command: |
-            if grep -q "...has been executed successfully." ~/project/backend/migrations_dump.txt
+            if grep -q "has been executed successfully." ~/project/backend/migrations_dump.txt
             then
-              curl --insecure https://kvdb.io/9XtyjaV32zF9w7FrifZcwX/migration_${CIRCLE_WORKFLOW_ID:0:7} -d '1' 
+              curl -k https://kvdb.io/9XtyjaV32zF9w7FrifZcwX/migration_${CIRCLE_WORKFLOW_ID:0:7}  -d '1'
             fi
       - destroy-environment:
-          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
+          workflow_id: "${CIRCLE_WORKFLOW_ID:0:7}"
       - revert-migrations:
-          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
+          workflow_id: "${CIRCLE_WORKFLOW_ID:0:7}"
      # Here's where you will add some code to rollback on failure      
 
   # deploy-frontend:
