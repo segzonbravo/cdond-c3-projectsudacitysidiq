@@ -246,7 +246,7 @@ jobs:
       # - restore_cache:
       #     keys: ['backend-build']
       - attach_workspace:
-          at: ~
+          at: ~/
       - run:
           name: Run migrations
           command: |
@@ -258,7 +258,7 @@ jobs:
             # npm install > /dev/null
             # npm run build > /dev/null
             npm run migrations >> migrations.txt
-            cat migrations_dump.txt
+            cat migrations.txt
       - run:
           name: Send migration results to kvdb.io
           command: |
