@@ -205,7 +205,37 @@ jobs:
             - project/.circleci/ansible/inventory.txt
       - destroy-environment:
           workflow_id: "${CIRCLE_WORKFLOW_ID:0:7}"      
-           
+
+
+  add-prometheus-node-exporter:
+    docker:
+      - image: python:3.10-alpine3.16
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - 'ab:52:25:68:df:4c:3a:d5:48:18:55:d8:f9:3b:df:de'
+      - run:
+          name: Install deps
+          command: |
+            apk add --update aws-cli tar gzip ansible nodejs npm
+      # - restore_cache:
+      #     keys: [backend-build]
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: Setup Prometheus Node Exporter
+          command: |
+            cd .circleci/ansible
+            cat inventory.txt
+            ansible-playbook -i inventory.txt node-exporter.yml \
+      # Here's where you will add some code to rollback on failure
+      - destroy-environment:
+          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
+      - revert-migrations:
+          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
+
+
   configure-infrastructure:
     docker:
     - image: python:3.7-alpine3.16
@@ -481,15 +511,15 @@ jobs:
             if [[ "${CIRCLE_WORKFLOW_ID:0:7}" =~ "${PriorWorkflowID}" ]]
             then
               echo "Already clean/nothing to clean"
-            else
-              echo "Cleaning up"
-              echo "Emptying bucket created by .circleci/files/frontend.yml"
-              # need to empty bucket before deleting it when deleting frontend stack
-              aws s3 rm "s3://udapeople-${PriorWorkflowID}" --recursive
-              echo "Deleting frontend stack (S3 bucket and policy) created by .circleci/files/frontend.yml"
-              aws cloudformation delete-stack --stack-name "udapeople-frontend-${PriorWorkflowID}"
-              echo "Deleting backend stack (EC2 instance and rules) created by .circleci/files/backend.yml"
-              aws cloudformation delete-stack --stack-name "udapeople-backend-${PriorWorkflowID}"
+            # else
+            #   echo "Cleaning up"
+            #   echo "Emptying bucket created by .circleci/files/frontend.yml"
+            #   # need to empty bucket before deleting it when deleting frontend stack
+            #   aws s3 rm "s3://udapeople-${PriorWorkflowID}" --recursive
+            #   echo "Deleting frontend stack (S3 bucket and policy) created by .circleci/files/frontend.yml"
+            #   aws cloudformation delete-stack --stack-name "udapeople-frontend-${PriorWorkflowID}"
+            #   echo "Deleting backend stack (EC2 instance and rules) created by .circleci/files/backend.yml"
+            #   aws cloudformation delete-stack --stack-name "udapeople-backend-${PriorWorkflowID}"
             fi
       - destroy-environment:
           workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
@@ -516,8 +546,10 @@ workflows:
           # filters:
           #   branches:
           #     only: [dev-branch]
-      - configure-infrastructure:
+      - add-prometheus-node-exporter:
           requires: [deploy-infrastructure]
+      - configure-infrastructure:
+          requires: [add-prometheus-node-exporter]
       - run-migrations:
           requires: [configure-infrastructure]
       - deploy-frontend:
