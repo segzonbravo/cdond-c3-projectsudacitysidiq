@@ -75,11 +75,6 @@ Resources:
           Description: Inbound for Prometheus
         - CidrIp:
             Ref: LocalIPAddress
-          FromPort: 8000
-          IpProtocol: tcp
-          ToPort: 8000
-        - CidrIp:
-            Ref: LocalIPAddress
           FromPort: 9100
           IpProtocol: tcp
           ToPort: 9100
