@@ -135,7 +135,8 @@ jobs:
           command: |
             cd frontend
             npm install
-            npm audit fix --audit-level=critical --force
+            npm audit --audit-level=critical
+            # npm audit fix --audit-level=critical --force
             
 
   scan-backend:
@@ -146,7 +147,7 @@ jobs:
       - restore_cache:
           keys: [BE-build]
       - run:
-          name: Scan Backend
+          name: Scan Backend Dependencies
           command: |
             cd backend
             npm install
