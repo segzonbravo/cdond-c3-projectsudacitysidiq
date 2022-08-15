@@ -442,6 +442,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Install dependencies
+          command: yum install tar gzip -y
+      - run:
           name: Save Old Workflow ID to a text file
           command: |
             aws cloudformation \
